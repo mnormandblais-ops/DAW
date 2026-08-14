@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>32-Bit Float DAW Recorder with 10-Band EQ & VU Meters</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e24;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+        }
+
+        .container {
+            background-color: #2a2a35;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 95%;
+            max-width: 1050px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .hardware-settings {
+            margin-bottom: 25px;
+            background: #111116;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #3b3b4f;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .menu-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .hardware-settings label {
+            font-weight: bold;
+            color: #1e90ff;
+            min-width: 160px;
+            text-align: right;
+        }
+
+        select {
+            background: #2a2a35;
+            color: white;
+            border: 1px solid #3b3b4f;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 30%;
+            cursor: pointer;
+        }
+
+        .btn-utility {
+            background-color: #57606f;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            text-transform: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-utility:hover { background-color: #747d8c; }
+        #btn-activate-monitor { background-color: #1e90ff; color: white; font-weight: bold; }
+        #btn-activate-monitor:hover { background-color: #70a1ff; }
+        #btn-load { background-color: #ffa502; color: #1e1e24; font-weight: bold; }
+        #btn-load:hover { background-color: #eccc68; }
+        #btn-reset-eq { background-color: #ff4757; color: white; font-weight: bold; }
+        #btn-reset-eq:hover { background-color: #ff6b81; }
+
+        .daw-workspace {
+            display: flex;
+            gap: 15px;
+            align-items: stretch;
+            margin-bottom: 25px;
+        }
+
+        .fader-strip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111116;
+            border: 1px solid #3b3b4f;
+            border-radius: 8px;
+            padding: 15px 8px;
+            width: 85px;
+            box-sizing: border-box;
+        }
+
+        .meter-strip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111116;
+            border: 1px solid #3b3b4f;
+            border-radius: 8px;
+            padding: 15px 8px;
+            width: 50px;
+            box-sizing: border-box;
+        }
+
+        .meter-container {
+            width: 14px;
+            height: 160px;
+            background-color: #0b0b0d;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #222;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 0%;
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(to top, #2ed573 0%, #2ed573 70%, #ffa502 85%, #ff4757 100%);
+            transition: height 0.05s ease;
+        }
+
+        .fader-label {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #a4b0be;
+            text-align: center;
+            line-height: 1.2;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slider-wrapper {
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vertical-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            transform: rotate(-90deg);
+            width: 140px;
+            height: 6px;
+            background: #2a2a35;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .vertical-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 24px;
+            border-radius: 3px;
+            background: #1e90ff;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        #slider-rec-output { background: #3b3b4f; }
+        #slider-rec-output::-webkit-slider-thumb { background: #ff4757; }
+        #slider-playback-output::-webkit-slider-thumb { background: #2ed573; }
+
+        .fader-value {
+            font-size: 10px;
+            margin-top: 10px;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        .center-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 0;
+        }
+
+        .controls-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .export-options {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #ffa502;
+            font-weight: bold;
+        }
+
+        .export-options input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        button:disabled {
+            background-color: #444 !important;
+            color: #777 !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #btn-record { background-color: #ff4757; color: white; }
+        #btn-record:hover:not(:disabled) { background-color: #ff6b81; transform: translateY(-2px); }
+
+        #btn-stop { background-color: #ffa502; color: #1e1e24; }
+        #btn-stop:hover:not(:disabled) { background-color: #eccc68; transform: translateY(-2px); }
+
+        #btn-play { background-color: #2ed573; color: white; }
+        #btn-play:hover:not(:disabled) { background-color: #7bed9f; transform: translateY(-2px); }
+
+        #btn-output { background-color: #1e90ff; color: white; }
+        #btn-output:hover:not(:disabled) { background-color: #70a1ff; transform: translateY(-2px); }
+
+        canvas {
+            background-color: #111116;
+            border: 2px solid #3b3b4f;
+            border-radius: 8px;
+            width: 100%;
+            height: 210px;
+            display: block;
+        }
+
+        .eq-rack {
+            background-color: #111116;
+            border: 1px solid #3b3b4f;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            overflow-x: auto;
+        }
+
+        .eq-strip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 50px;
+        }
+
+        .eq-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #1e90ff;
+            margin-bottom: 8px;
+        }
+
+        .eq-slider-wrapper {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .eq-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            transform: rotate(-90deg);
+            width: 100px;
+            height: 4px;
+            background: #2a2a35;
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .eq-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 18px;
+            border-radius: 2px;
+            background: #ffa502;
+            cursor: pointer;
+        }
+
+        .eq-value {
+            font-size: 10px;
+            margin-top: 8px;
+            color: #a4b0be;
+            font-family: monospace;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-style: italic;
+            color: #a4b0be;
+            min-height: 20px;
+        }
+
+        .spec-badge {
+            background-color: #2f3542;
+            color: #ffa502;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Single Track DAW Workspace <span class="spec-badge">32-BIT FLOAT / 10-BAND EQ</span></h1>
+    
+    <div class="hardware-settings">
+        <div class="menu-row">
+            <label for="audio-input-select">Sound Interface:</label>
+            <select id="audio-input-select">
+                <option value="">Click Activate Live Monitor...</option>
+            </select>
+            <button id="btn-activate-monitor" class="btn-utility">Activate Live Monitor</button>
+            <button id="btn-rescan" class="btn-utility">Rescan Hardware</button>
+            <button id="btn-load" class="btn-utility">Load WAV File</button>
+            <button id="btn-reset-eq" class="btn-utility">Reset EQ</button>
+            <input type="file" id="file-input" accept="audio/wav" style="display: none;">
+        </div>
+    </div>
+
+    <div class="daw-workspace">
+        <!-- Input Volume Meter Strip -->
+        <div class="meter-strip">
+            <div class="fader-label">In Meter</div>
+            <div class="meter-container">
+                <div id="meter-input-bar" class="meter-bar"></div>
+            </div>
+            <div class="fader-value" id="val-meter-input">-∞ dB</div>
+        </div>
+
+        <!-- Recording Track Output Scaling Fader Strip -->
+        <div class="fader-strip">
+            <div class="fader-label">Rec Out<br>Gain Scale</div>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-rec-output" class="vertical-slider" min="0" max="1.5" step="0.01" value="1.0">
+            </div>
+            <div class="fader-value" id="val-rec-output">100%</div>
+        </div>
+
+        <!-- Main Display Panel -->
+        <div class="center-panel">
+            <canvas id="visualizer" width="610" height="210"></canvas>
+            
+            <!-- Graphic Equalizer Rack Component -->
+            <div class="eq-rack" id="eq-rack-panel"></div>
+
+            <div class="controls-wrapper">
+                <div class="controls">
+                    <button id="btn-record">Record</button>
+                    <button id="btn-stop" disabled>Stop</button>
+                    <button id="btn-play" disabled>Play Back</button>
+                    <button id="btn-output" disabled>Output WAV</button>
+                </div>
+                
+                <div class="export-options">
+                    <input type="checkbox" id="chk-apply-eq-export" checked>
+                    <label for="chk-apply-eq-export">Bake EQ profile adjustments directly into exported WAV</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playback Output Fader Strip -->
+        <div class="fader-strip">
+            <div class="fader-label">Play Out<br>Fader</div>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-playback-output" class="vertical-slider" min="0" max="1" step="0.01" value="0.8">
+            </div>
+            <div class="fader-value" id="val-playback-output">80%</div>
+        </div>
+
+        <!-- Output Volume Meter Strip -->
+        <div class="meter-strip">
+            <div class="fader-label">Out Meter</div>
+            <div class="meter-container">
+                <div id="meter-output-bar" class="meter-bar"></div>
+            </div>
+            <div class="fader-value" id="val-meter-output">-∞ dB</div>
+        </div>
+    </div>
+    
+    <div class="status" id="status-text">Click "Activate Live Monitor" to grant microphone access and start meters.</div>
+</div>
+
+<script>
+// AudioWorklet Processor source code string
+const workletCode = `
+    class RecorderWorklet extends AudioWorkletProcessor {
+        constructor() {
+            super();
+            this.isRecording = false;
+            this.currentAgcGain = 1.0;
+            this.agcThreshold = 0.89;
+            this.attackCoeff = 0.1;
+            this.releaseCoeff = 0.005;
+
+            this.port.onmessage = (e) => {
+                if (e.data.command === 'START_RECORDING') {
+                    this.isRecording = true;
+                } else if (e.data.command === 'STOP_RECORDING') {
+                    this.isRecording = false;
+                }
+            };
+        }
+
+        process(inputs, outputs, parameters) {
+            const input = inputs[0];
+            const output = outputs[0];
+
+            if (!input || input.length === 0 || input[0].length === 0) return true;
+
+            const inputChannel = input[0];
+            const outputChannel = output[0];
+            const liveOutputGainScale = parameters.recOutputGain ? parameters.recOutputGain[0] : 1.0;
+
+            let blockPeak = 0;
+            for (let i = 0; i < inputChannel.length; i++) {
+                const absVal = Math.abs(inputChannel[i]);
+                if (absVal > blockPeak) blockPeak = absVal;
+            }
+
+            if (blockPeak > this.agcThreshold) {
+                const targetGain = this.agcThreshold / blockPeak;
+                this.currentAgcGain += this.attackCoeff * (targetGain - this.currentAgcGain);
+            } else {
+                this.currentAgcGain += this.releaseCoeff * (1.0 - this.currentAgcGain);
+            }
+
+            const processedBlock = new Float32Array(inputChannel.length);
+            for (let i = 0; i < inputChannel.length; i++) {
+                processedBlock[i] = inputChannel[i] * this.currentAgcGain * liveOutputGainScale;
+                if (outputChannel) {
+                    outputChannel[i] = processedBlock[i];
+                }
+            }
+
+            if (this.isRecording) {
+                this.port.postMessage({
+                    command: 'AUDIO_DATA',
+                    buffer: processedBlock,
+                    currentAgcGain: this.currentAgcGain
+                });
+            }
+
+            return true;
+        }
+
+        static get parameterDescriptors() {
+            return [{
+                name: 'recOutputGain',
+                defaultValue: 1.0,
+                minValue: 0.0,
+                maxValue: 1.5,
+                automationRate: 'k-rate'
+            }];
+        }
+    }
+    registerProcessor('recorder-worklet', RecorderWorklet);
+`;
+
+// Encode using data: URI scheme to safely bypass Blob URL script execution blocks
+const workletDataUrl = `data:text/javascript;base64,${btoa(unescape(encodeURIComponent(workletCode)))}`;
+
+let audioContext = null;
+let mediaStream = null;
+let audioSource = null;
+let processorNode = null;
+let analyserNode = null;
+let outputGainNode = null;
+
+let liveInputAnalyser = null;
+let liveOutputAnalyser = null;
+let liveInputNode = null;
+let preRecStream = null;
+
+let heartBeatOscillator = null;
+let heartBeatGain = null;
+
+let eqFilters = {};
+let audioBuffers = []; 
+let recordedAudioBuffer = null; 
+let playbackSource = null;
+
+let isRecording = false;
+let isPlaying = false;
+let isMetersRunning = false;
+let isMonitorActive = false;
+const TARGET_SAMPLE_RATE = 44100;
+
+const EQ_FREQUENCIES = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+let eqGainsData = {}; 
+EQ_FREQUENCIES.forEach(freq => eqGainsData[freq] = 0);
+
+let statusTimeout = null;
+
+// DOM Mappings
+const btnRecord = document.getElementById('btn-record');
+const btnStop = document.getElementById('btn-stop');
+const btnPlay = document.getElementById('btn-play');
+const btnOutput = document.getElementById('btn-output');
+const btnRescan = document.getElementById('btn-rescan');
+const btnActivateMonitor = document.getElementById('btn-activate-monitor');
+const btnLoad = document.getElementById('btn-load');
+const btnResetEq = document.getElementById('btn-reset-eq');
+const fileInput = document.getElementById('file-input');
+const chkApplyEqExport = document.getElementById('chk-apply-eq-export');
+const sliderRecOutput = document.getElementById('slider-rec-output');
+const sliderPlaybackOutput = document.getElementById('slider-playback-output');
+const valRecOutput = document.getElementById('val-rec-output');
+const valPlaybackOutput = document.getElementById('val-playback-output');
+const statusText = document.getElementById('status-text');
+const deviceSelect = document.getElementById('audio-input-select');
+const canvas = document.getElementById('visualizer');
+const canvasCtx = canvas.getContext('2d');
+const eqRackPanel = document.getElementById('eq-rack-panel');
+
+const meterInputBar = document.getElementById('meter-input-bar');
+const valMeterInput = document.getElementById('val-meter-input');
+const meterOutputBar = document.getElementById('meter-output-bar');
+const valMeterOutput = document.getElementById('val-meter-output');
+
+clearCanvas();
+buildEqUiElements();
+
+btnRecord.addEventListener('click', startRecording);
+btnStop.addEventListener('click', stopAction);
+btnPlay.addEventListener('click', startPlayback);
+btnOutput.addEventListener('click', exportWav);
+btnRescan.addEventListener('click', initializeAudioDevices);
+btnActivateMonitor.addEventListener('click', toggleLiveMonitor);
+btnResetEq.addEventListener('click', resetEqualizerBands);
+
+btnLoad.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', importWav);
+deviceSelect.addEventListener('change', handleDeviceChange);
+
+// Initial layout settings listeners
+sliderRecOutput.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    valRecOutput.innerText = Math.round(val * 100) + "%";
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+            e.preventDefault(); 
+            if (isRecording || isPlaying) {
+                stopAction();
+            }
+        }
+    }
+});
+
+sliderPlaybackOutput.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    valPlaybackOutput.innerText = Math.round(val * 100) + "%";
+    if (outputGainNode && audioContext) {
+        outputGainNode.gain.setValueAtTime(val, audioContext.currentTime);
+    }
+});
+
+function ensureAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({
+            sampleRate: TARGET_SAMPLE_RATE
+        });
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    startContextHeartbeat();
+}
+
+function startContextHeartbeat() {
+    if (heartBeatOscillator) return;
+    try {
+        heartBeatOscillator = audioContext.createOscillator();
+        heartBeatGain = audioContext.createGain();
+        heartBeatOscillator.type = 'sine';
+        heartBeatOscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        heartBeatGain.gain.setValueAtTime(0.00001, audioContext.currentTime);
+        
+        heartBeatOscillator.connect(heartBeatGain);
+        heartBeatGain.connect(audioContext.destination);
+        heartBeatOscillator.start(0);
+    } catch(e) {
+        console.warn("Heartbeat setup safely caught:", e);
+    }
+}
+
+async function toggleLiveMonitor() {
+    ensureAudioContext();
+    
+    if (isMonitorActive) {
+        isMonitorActive = false;
+        cleanupMonitoringGraph();
+        btnActivateMonitor.style.backgroundColor = "#1e90ff";
+        btnActivateMonitor.innerText = "Activate Live Monitor";
+        statusText.innerText = "Live monitor disabled. Audio pipeline idle.";
+        
+        meterInputBar.style.height = "0%";
+        valMeterInput.innerText = "-∞ dB";
+    } else {
+        isMonitorActive = true;
+        await initializeAudioDevices();
+        btnActivateMonitor.style.backgroundColor = "#2ed573";
+        btnActivateMonitor.innerText = "Monitor Active (Click to Stop)";
+    }
+}
+
+function cleanupMonitoringGraph() {
+    if (preRecStream) {
+        preRecStream.getTracks().forEach(track => track.stop());
+        preRecStream = null;
+    }
+    if (liveInputNode) { try { liveInputNode.disconnect(); } catch(e){} liveInputNode = null; }
+    if (liveInputAnalyser) { try { liveInputAnalyser.disconnect(); } catch(e){} liveInputAnalyser = null; }
+}
+
+function buildEqUiElements() {
+    eqRackPanel.innerHTML = '';
+    EQ_FREQUENCIES.forEach(freq => {
+        const labelStr = freq >= 1000 ? (freq/1000) + 'k' : freq + 'Hz';
+        const strip = document.createElement('div');
+        strip.className = 'eq-strip';
+        
+        strip.innerHTML = `
+            <div class="eq-label">${labelStr}</div>
+            <div class="eq-slider-wrapper">
+                <input type="range" class="eq-slider" min="-12" max="12" step="1" value="0" data-freq="${freq}" id="slider-eq-${freq}">
+            </div>
+            <div class="eq-value" id="val-eq-${freq}">0 dB</div>
+        `;
+        
+        const input = strip.querySelector('.eq-slider');
+        input.addEventListener('input', (e) => {
+            const gainVal = parseFloat(e.target.value);
+            eqGainsData[freq] = gainVal;
+            document.getElementById(`val-eq-${freq}`).innerText = (gainVal > 0 ? '+' : '') + gainVal + ' dB';
+            
+            if (eqFilters[freq] && audioContext) {
+                eqFilters[freq].gain.setValueAtTime(gainVal, audioContext.currentTime);
+            }
+        });
+        
+        eqRackPanel.appendChild(strip);
+    });
+}
+
+function resetEqualizerBands() {
+    EQ_FREQUENCIES.forEach(freq => {
+        eqGainsData[freq] = 0;
+        const slider = document.getElementById(`slider-eq-${freq}`);
+        if (slider) slider.value = 0;
+        
+        const label = document.getElementById(`val-eq-${freq}`);
+        if (label) label.innerText = '0 dB';
+        
+        if (eqFilters[freq] && audioContext) {
+            eqFilters[freq].gain.setValueAtTime(0, audioContext.currentTime);
+        }
+    });
+    statusText.innerText = "Equalizer returned to initial flat state (0 dB).";
+}
+
+function setupEqFilterGraph(ctx) {
+    let localFilters = {};
+    let lastNode = null;
+    
+    EQ_FREQUENCIES.forEach((freq, index) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'peaking';
+        filter.frequency.value = freq;
+        filter.Q.value = 1.0;
+        filter.gain.value = eqGainsData[freq];
+        
+        localFilters[freq] = filter;
+        
+        if (index > 0) {
+            lastNode.connect(filter);
+        }
+        lastNode = filter;
+    });
+    
+    return {
+        head: localFilters[EQ_FREQUENCIES[0]],
+        tail: lastNode,
+        filtersMap: localFilters
+    };
+}
+
+async function initializeAudioDevices() {
+    statusText.innerText = "Scanning system sound drivers...";
+    try {
+        ensureAudioContext();
+        
+        const streamToken = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamToken.getTracks().forEach(track => track.stop()); 
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+        deviceSelect.innerHTML = ''; 
+
+        if(audioInputs.length === 0) {
+            const opt = document.createElement('option');
+            opt.text = "No hardware inputs exposed";
+            deviceSelect.appendChild(opt);
+            return;
+        }
+
+        let selectedIndex = 0;
+        audioInputs.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Sound Interface Input ${index + 1}`;
+            deviceSelect.appendChild(option);
+        });
+
+        deviceSelect.selectedIndex = selectedIndex;
+        statusText.innerText = "Hardware found. Connected monitoring loops.";
+
+        if (isMonitorActive) {
+            await setupInputLevelMonitoring();
+        }
+    } catch (err) {
+        console.error(err);
+        statusText.innerText = "Hardware access blocked. Check browser microphone permissions.";
+    }
+}
+
+async function handleDeviceChange() {
+    if (!isRecording && isMonitorActive) {
+        await setupInputLevelMonitoring();
+    }
+}
+
+async function setupInputLevelMonitoring() {
+    try {
+        ensureAudioContext();
+        cleanupMonitoringGraph();
+        
+        const chosenDeviceId = deviceSelect.value;
+        if(!chosenDeviceId) return;
+
+        preRecStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                deviceId: { exact: chosenDeviceId },
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        });
+
+        liveInputNode = audioContext.createMediaStreamSource(preRecStream);
+        liveInputAnalyser = audioContext.createAnalyser();
+        liveInputAnalyser.fftSize = 256;
+        
+        liveInputNode.connect(liveInputAnalyser);
+
+        if(!isMetersRunning) {
+            isMetersRunning = true;
+            updateVisualMeters();
+        }
+    } catch(e) {
+        console.warn("Monitoring configuration failure: ", e);
+    }
+}
+
+function updateVisualMeters() {
+    requestAnimationFrame(updateVisualMeters);
+
+    if (isMonitorActive && liveInputAnalyser) {
+        const dataArray = new Float32Array(liveInputAnalyser.fftSize);
+        liveInputAnalyser.getFloatTimeDomainData(dataArray);
+        let peak = 0;
+        for(let i=0; i < dataArray.length; i++) {
+            let abs = Math.abs(dataArray[i]);
+            if (abs > peak) peak = abs;
+        }
+        let db = 20 * Math.log10(peak);
+        if (db < -60 || !isFinite(db)) db = -60;
+        
+        let percentage = ((db + 60) / 60) * 100;
+        meterInputBar.style.height = percentage + "%";
+        valMeterInput.innerText = db === -60 ? "-∞ dB" : Math.round(db) + " dB";
+    } else if (!isMonitorActive && !isRecording) {
+        meterInputBar.style.height = "0%";
+        valMeterInput.innerText = "-∞ dB";
+    }
+
+    if ((isPlaying || isRecording) && liveOutputAnalyser) {
+        const dataArray = new Float32Array(liveOutputAnalyser.fftSize);
+        liveOutputAnalyser.getFloatTimeDomainData(dataArray);
+        let peak = 0;
+        for(let i=0; i < dataArray.length; i++) {
+            let abs = Math.abs(dataArray[i]);
+            if (abs > peak) peak = abs;
+        }
+        let db = 20 * Math.log10(peak);
+        if (db < -60 || !isFinite(db)) db = -60;
+
+        let percentage = ((db + 60) / 60) * 100;
+        meterOutputBar.style.height = percentage + "%";
+        valMeterOutput.innerText = db === -60 ? "-∞ dB" : Math.round(db) + " dB";
+    } else {
+        meterOutputBar.style.height = "0%";
+        valMeterOutput.innerText = "-∞ dB";
+    }
+}
+
+function scheduleStatusUpdate(text) {
+    if (statusText) {
+        statusText.innerText = text;
+        clearTimeout(statusTimeout);
+        statusTimeout = setTimeout(() => {
+            if (isRecording) {
+                statusText.innerText = "Recording active stream...";
+            }
+        }, 1200);
+    }
+}
+
+async function startRecording() {
+    ensureAudioContext();
+    audioBuffers = []; 
+    recordedAudioBuffer = null;
+    
+    cleanupMonitoringGraph();
+
+    try {
+        const chosenDeviceId = deviceSelect.value;
+        const constraints = {
+            audio: {
+                deviceId: chosenDeviceId ? { exact: chosenDeviceId } : undefined,
+                sampleRate: TARGET_SAMPLE_RATE,
+                echoCancellation: false,   
+                noiseSuppression: false,   
+                autoGainControl: false     
+            }
+        };
+
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        audioSource = audioContext.createMediaStreamSource(mediaStream);
+
+        // Uses Base64 dataUrl string processing to bypass security flags
+        await audioContext.audioWorklet.addModule(workletDataUrl);
+
+        liveInputAnalyser = audioContext.createAnalyser();
+        liveInputAnalyser.fftSize = 256;
+        audioSource.connect(liveInputAnalyser);
+
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 2048;
+
+        liveOutputAnalyser = audioContext.createAnalyser();
+        liveOutputAnalyser.fftSize = 256;
+
+        processorNode = new AudioWorkletNode(audioContext, 'recorder-worklet');
+        
+        const recGainParam = processorNode.parameters.get('recOutputGain');
+        recGainParam.setValueAtTime(parseFloat(sliderRecOutput.value), audioContext.currentTime);
+        
+        sliderRecOutput.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            valRecOutput.innerText = Math.round(val * 100) + "%";
+            recGainParam.setValueAtTime(val, audioContext.currentTime);
+        };
+
+        processorNode.port.onmessage = (e) => {
+            if (e.data.command === 'AUDIO_DATA') {
+                audioBuffers.push(e.data.buffer);
+                
+                if (e.data.currentAgcGain < 0.95) {
+                    const dbDropped = (20 * Math.log10(e.data.currentAgcGain)).toFixed(1);
+                    scheduleStatusUpdate(`AGC Attenuating Peak: ${dbDropped} dB`);
+                }
+            }
+        };
+
+        const graph = setupEqFilterGraph(audioContext);
+        eqFilters = graph.filtersMap;
+
+        audioSource.connect(graph.head);
+        graph.tail.connect(analyserNode);
+        analyserNode.connect(processorNode);
+        
+        processorNode.connect(liveOutputAnalyser);
+        processorNode.connect(audioContext.destination);
+
+        processorNode.port.postMessage({ command: 'START_RECORDING' });
+
+        isRecording = true;
+        statusText.innerText = "Recording active track pipeline via AudioWorklet... (Press SPACE to Stop)";
+        
+        btnRecord.disabled = true;
+        btnStop.disabled = false;
+        btnPlay.disabled = true;
+        btnOutput.disabled = true;
+        deviceSelect.disabled = true; 
+        btnRescan.disabled = true;
+        btnLoad.disabled = true;
+        btnActivateMonitor.disabled = true;
+
+        drawRealTimeWave();
+    } catch (err) {
+        console.error(err);
+        statusText.innerText = "Failed to start worklet pipeline: " + err.message;
+        if (isMonitorActive) await setupInputLevelMonitoring(); 
+    }
+}
+
+async function stopAction() {
+    if (isRecording) {
+        isRecording = false;
+        
+        if (processorNode) {
+            processorNode.port.postMessage({ command: 'STOP_RECORDING' });
+            processorNode.disconnect();
+            sliderRecOutput.oninput = null;
+        }
+        
+        if (analyserNode) analyserNode.disconnect();
+        if (liveOutputAnalyser) liveOutputAnalyser.disconnect();
+        
+        EQ_FREQUENCIES.forEach(freq => {
+            if (eqFilters[freq]) eqFilters[freq].disconnect();
+        });
+        
+        if (audioSource) audioSource.disconnect();
+        if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+        
+        compileBuffers();
+        
+        statusText.innerText = "AudioWorklet processing pass complete.";
+        btnRecord.disabled = false;
+        btnStop.disabled = true;
+        btnPlay.disabled = false;
+        btnOutput.disabled = false;
+        deviceSelect.disabled = false;
+        btnRescan.disabled = false;
+        btnLoad.disabled = false;
+        btnActivateMonitor.disabled = false;
+        
+        drawStaticWave();
+        if (isMonitorActive) await setupInputLevelMonitoring(); 
+    } 
+    else if (isPlaying) {
+        await stopPlayback();
+    }
+}
+
+function compileBuffers() {
+    if (audioBuffers.length === 0) return;
+    let totalLength = audioBuffers.reduce((acc, buf) => acc + buf.length, 0);
+    let result = new Float32Array(totalLength);
+    let offset = 0;
+    for (let buffer of audioBuffers) {
+        result.set(buffer, offset);
+        offset += buffer.length;
+    }
+    
+    recordedAudioBuffer = audioContext.createBuffer(1, totalLength, TARGET_SAMPLE_RATE);
+    recordedAudioBuffer.copyToChannel(result, 0);
+}
+
+async function importWav(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    ensureAudioContext();
+    statusText.innerText = "Decoding audio data file...";
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        try {
+            const arrayBuffer = event.target.result;
+            audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+                recordedAudioBuffer = buffer;
+                statusText.innerText = `Successfully loaded: ${file.name}`;
+                btnPlay.disabled = false;
+                btnOutput.disabled = false;
+                drawStaticWave();
+            }, (err) => {
+                statusText.innerText = "Decoding failed.";
+                console.error(err);
+            });
+        } catch (err) {
+            statusText.innerText = "Error reading track: " + err.message;
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    fileInput.value = '';
+}
+
+function startPlayback() {
+    if (!recordedAudioBuffer) return;
+    ensureAudioContext();
+
+    playbackSource = audioContext.createBufferSource();
+    playbackSource.buffer = recordedAudioBuffer;
+    
+    outputGainNode = audioContext.createGain();
+    outputGainNode.gain.setValueAtTime(parseFloat(sliderPlaybackOutput.value), audioContext.currentTime);
+
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 2048;
+
+    liveOutputAnalyser = audioContext.createAnalyser();
+    liveOutputAnalyser.fftSize = 256;
+
+    const graph = setupEqFilterGraph(audioContext);
+    eqFilters = graph.filtersMap;
+
+    playbackSource.connect(graph.head);
+    graph.tail.connect(outputGainNode);
+    outputGainNode.connect(analyserNode);
+    
+    analyserNode.connect(liveOutputAnalyser);
+    liveOutputAnalyser.connect(audioContext.destination);
+    
+    isPlaying = true;
+    statusText.innerText = "Playing track through active EQ... (Press SPACE to Stop)";
+    btnRecord.disabled = true;
+    btnPlay.disabled = true;
+    btnStop.disabled = false;
+    btnOutput.disabled = true;
+    btnLoad.disabled = true;
+    btnActivateMonitor.disabled = true;
+
+    playbackSource.start(0);
+    drawRealTimeWave();
+
+    playbackSource.onended = () => {
+        if(isPlaying) stopPlayback();
+    };
+}
+
+async function stopPlayback() {
+    isPlaying = false;
+    if (playbackSource) {
+        try { playbackSource.stop(); } catch(e){}
+        playbackSource.disconnect();
+    }
+    EQ_FREQUENCIES.forEach(freq => {
+        if (eqFilters[freq]) eqFilters[freq].disconnect();
+    });
+    if (outputGainNode) outputGainNode.disconnect();
+    if (liveOutputAnalyser) liveOutputAnalyser.disconnect();
+    
+    statusText.innerText = "Playback stopped.";
+    btnRecord.disabled = false;
+    btnPlay.disabled = false;
+    btnStop.disabled = true;
+    btnOutput.disabled = false;
+    btnLoad.disabled = false;
+    btnActivateMonitor.disabled = false;
+    drawStaticWave();
+    if (isMonitorActive) await setupInputLevelMonitoring();
+}
+
+async function getRenderedAudioBufferWithEQ(srcBuffer) {
+    const offlineCtx = new OfflineAudioContext(
+        srcBuffer.numberOfChannels,
+        srcBuffer.length,
+        srcBuffer.sampleRate
+    );
+    
+    const bufferSource = offlineCtx.createBufferSource();
+    bufferSource.buffer = srcBuffer;
+    
+    const graph = setupEqFilterGraph(offlineCtx);
+    
+    bufferSource.connect(graph.head);
+    graph.tail.connect(offlineCtx.destination);
+    bufferSource.start(0);
+    
+    return await offlineCtx.startRendering();
+}
+
+function clearCanvas() {
+    canvasCtx.fillStyle = '#111116';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.strokeStyle = '#3b3b4f';
+    canvasCtx.lineWidth = 1;
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(0, canvas.height / 2);
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+}
+
+function drawRealTimeWave() {
+    if (!isRecording && !isPlaying) return;
+    requestAnimationFrame(drawRealTimeWave);
+
+    const bufferLength = analyserNode.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyserNode.getByteTimeDomainData(dataArray);
+
+    canvasCtx.fillStyle = '#111116';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = isRecording ? '#ff4757' : '#2ed573';
+    canvasCtx.beginPath();
+
+    const sliceWidth = canvas.width * 1.0 / bufferLength;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0; 
+        const y = v * canvas.height / 2;
+        if (i === 0) { canvasCtx.moveTo(x, y); } else { canvasCtx.lineTo(x, y); }
+        x += sliceWidth;
+    }
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+}
+
+function drawStaticWave() {
+    if (!recordedAudioBuffer) return;
+    clearCanvas();
+    const data = recordedAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / canvas.width);
+    const amp = canvas.height / 2;
+    
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = '#1e90ff';
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(0, amp);
+
+    for(let i=0; i<canvas.width; i++){
+        let min = 1.0; let max = -1.0;
+        for (let j=0; j<step; j++) {
+            let datum = data[(i*step)+j]; 
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        canvasCtx.lineTo(i, (1 + min) * amp);
+        canvasCtx.lineTo(i, (1 + max) * amp);
+    }
+    canvasCtx.stroke();
+}
+
+async function exportWav() {
+    if (!recordedAudioBuffer) return;
+    
+    statusText.innerText = "Preparing track details for export pass...";
+    let bufferToExport = recordedAudioBuffer;
+    
+    if (chkApplyEqExport.checked) {
+        statusText.innerText = "Baking 10-band EQ response curves into array buffer...";
+        bufferToExport = await getRenderedAudioBufferWithEQ(recordedAudioBuffer);
+    }
+    
+    const buffer = bufferToExport.getChannelData(0);
+    const wavBuffer = encode32BitFloatWAV(buffer, bufferToExport.sampleRate);
+    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+    
+    if ('showSaveFilePicker' in window) {
+        try {
+            const options = {
+                suggestedName: chkApplyEqExport.checked ? 'daw-track-eq-processed.wav' : 'daw-track-raw.wav',
+                types: [{
+                    description: 'Waveform Audio File',
+                    accept: { 'audio/wav': ['.wav'] }
+                }]
+            };
+            const handle = await window.showSaveFilePicker(options);
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            statusText.innerText = "Export complete. File saved cleanly.";
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                statusText.innerText = "Export error: " + err.message;
+            } else {
+                statusText.innerText = "Export canceled by user.";
+            }
+        }
+    } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style = 'display: none';
+        a.href = url;
+        a.download = chkApplyEqExport.checked ? 'daw-track-eq-processed.wav' : 'daw-track-raw.wav';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        statusText.innerText = "Export complete. WAV downloaded.";
+    }
+}
+
+function encode32BitFloatWAV(samples, sampleRate) {
+    const bytesPerSample = 4;
+    const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+    const view = new DataView(buffer);
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 3, true);                          
+    view.setUint16(22, 1, true);                          
+    view.setUint32(24, sampleRate, true);                 
+    view.setUint32(28, sampleRate * bytesPerSample, true);   
+    view.setUint16(32, bytesPerSample, true);             
+    view.setUint16(34, 32, true);                         
+    writeString(view, 36, 'data');
+    view.setUint32(40, samples.length * bytesPerSample, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+        view.setFloat32(offset, samples[i], true);
+        offset += 4;
+    }
+    return buffer;
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+</script>
+</body>
+</html>
